@@ -1,0 +1,47 @@
+{
+  "folders":
+  [
+    {
+      "path": ".",
+      "name": "root",
+      "folder_exclude_patterns": [
+        ".svn",
+        ".git",
+        ".hg",
+        "CVS",
+        "venv",
+        "__pycache__",
+      ],
+      "follow_symlinks": true,
+    },
+  ],
+  "settings":
+  {
+    /*"default_encoding": "UTF-8",*/
+    /*"default_line_ending": "unix",*/
+    "detect_indentation": false,
+    /*"ensure_newline_at_eof_on_save": true,*/
+    "show_definitions": false,
+    "show_line_endings": true,
+    /*"tab_size": 2,*/
+    /*"translate_tabs_to_spaces": true,*/
+    /*"trim_trailing_white_space_on_save": true,*/
+    "use_tab_stops": true,
+    "word_wrap": true,
+
+    /* sublack */
+    "sublack.black_command": "${folder}/venv/bin/black",
+
+    /* SublimeLinter-pylint */
+    "SublimeLinter.linters.pylint.disable": false,
+    "SublimeLinter.linters.pylint.python": "${folder}/venv/bin/python",
+    "SublimeLinter.linters.pylint.working_dir": "${file_path}",
+    "SublimeLinter.linters.pylint.executable": "${folder}/venv/bin/pylint",
+    "SublimeLinter.linters.pylint.args": [
+      "--rcfile=${folder}/pyproject.toml",
+      "--load-plugins=pylint_quotes",
+    ],
+    "SublimeLinter.linters.pylint.lint_mode": "load_save",
+    "SublimeLinter.linters.pylint.selector": "source.python, source.py",
+  },
+}
