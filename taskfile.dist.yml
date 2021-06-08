@@ -1,0 +1,12 @@
+version: '3'
+
+silent: true
+
+tasks:
+  update-stubs:
+    desc: task update-stubs
+    cmds:
+      - |
+        if ! [ -d "{{.TASKFILE_DIR}}/typings" ]; then mkdir -p {{.TASKFILE_DIR}}/typings; fi
+        wget -O {{.TASKFILE_DIR}}/typings/sublime.pyi https://raw.githubusercontent.com/sublimelsp/LSP/refs/heads/main/stubs/sublime.pyi
+        wget -O {{.TASKFILE_DIR}}/typings/sublime_plugin.pyi https://raw.githubusercontent.com/sublimelsp/LSP/refs/heads/main/stubs/sublime_plugin.pyi
