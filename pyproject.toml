@@ -1,0 +1,33 @@
+[tool.pyright]
+venvPath = "."
+venv = "venv"
+pythonVersion = "3.8"
+
+	[[tool.pyright.executionEnvironments]]
+	root = "."
+	extraPaths = []
+	pythonVersion = "3.8"
+	pythonPlatform = "Linux"
+
+[tool.ruff]
+extend-exclude = ["CVS", "__pycache__"]
+extend-ignore = ["D206"]
+extend-select = ["C90", "I", "N", "A", "COM", "PIE", "PT", "Q", "SIM", "PLR"]
+fix = false
+fix-only = false
+force-exclude = true
+line-length = 120
+target-version = "py38"
+
+	[tool.ruff.pycodestyle]
+	max-doc-length = 120
+
+[tool.black]
+line-length = 120
+target-version = ["py38"]
+# include = "\.pyi?$"
+extend-exclude = """
+/(
+	__pycache__
+)/
+"""
