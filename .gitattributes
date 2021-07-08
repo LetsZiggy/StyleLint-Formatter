@@ -1,0 +1,5 @@
+editor.sublime-project export-ignore
+requirements.txt export-ignore
+setup.cfg export-ignore
+.editorconfig export-ignore
+.yapfignore export-ignore
