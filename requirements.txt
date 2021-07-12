@@ -1,3 +1,3 @@
 pylint~=2.8.3
 pylint-quotes~=0.2.3
-yapf~=0.31.0
+yapf @ git+https://github.com/LetsZiggy/yapf.git@fix-quote

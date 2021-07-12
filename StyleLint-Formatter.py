@@ -79,7 +79,8 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
       return PluginUtils.normalize_path(project_path)
     if filename is not None:
       cdir = os.path.dirname(filename)
-      if os.path.exists(cdir): return cdir
+      if os.path.exists(cdir):
+        return cdir
     return os.getcwd()
 
   def run_script_on_file(self, filename=None, content=None):
@@ -122,7 +123,8 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
 
       cdir = self.get_lint_directory(filename)
 
-      if type(content) == str: content = content.encode("utf-8")
+      if type(content) == str:
+        content = content.encode("utf-8")
 
       output = PluginUtils.get_output(cmd, cdir, content)
 
@@ -151,7 +153,8 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
 class StyleLintFormatterEventListeners(sublime_plugin.EventListener):
   @staticmethod
   def should_run_command(view):
-    if not PluginUtils.get_pref("format_on_save"): return False
+    if not PluginUtils.get_pref("format_on_save"):
+      return False
 
     extensions = PluginUtils.get_pref("format_on_save_extensions")
     extension = os.path.splitext(view.file_name())[1][1:]
@@ -261,7 +264,8 @@ class PluginUtils:
       return None
     else:
       path = PluginUtils.get_pref("local_stylelint_path").get(sublime.platform())
-      if not path: return None
+      if not path:
+        return None
       d = os.path.dirname(os.path.dirname(pkg))
       esl = os.path.join(d, path)
 
@@ -287,9 +291,7 @@ class PluginUtils:
     try:
       p = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=cdir, shell=IS_WINDOWS)
     except OSError:
-      raise Exception(
-        "Couldn't find Node.js. Make sure it's in your $PATH by running `node -v` in your command-line."
-      )
+      raise Exception("Couldn't find Node.js. Make sure it's in your $PATH by running `node -v` in your command-line.")
 
     stdout, stderr = p.communicate(input=data)
     stdout = stdout.decode("utf-8")
