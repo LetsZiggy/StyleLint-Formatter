@@ -1,0 +1,8 @@
+editor.sublime-project export-ignore
+formatter-test.css export-ignore
+package.json export-ignore
+pnpm-lock.yaml export-ignore
+pyproject.toml export-ignore
+requirements.txt export-ignore
+.editorconfig export-ignore
+.stylelintrc.js export-ignore
