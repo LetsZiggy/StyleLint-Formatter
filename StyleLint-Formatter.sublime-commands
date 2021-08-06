@@ -1,0 +1,6 @@
+[
+	{
+		"caption": "StyleLint Formatter: Format this file",
+		"command": "format_stylelint",
+	},
+]

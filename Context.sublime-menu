@@ -1,0 +1,11 @@
+[
+	{
+		"caption": "StyleLint Formatter",
+		"children": [
+			{
+				"caption": "Format This File",
+				"command": "format_stylelint",
+			},
+		],
+	},
+]
