@@ -1,0 +1,94 @@
+[
+	{
+		"id": "tools",
+		"children": [
+			{
+				"id": "stylelintformatter_tools",
+				"caption": "StyleLint Formatter",
+				"children": [
+					{
+						"caption": "Format This File",
+						"command": "format_stylelint",
+					},
+				],
+			},
+		],
+	},
+	{
+		"id": "preferences",
+		"children": [
+			{
+				"id": "package-settings",
+				"children": [
+					{
+						"caption": "StyleLint Formatter",
+						"children": [
+							{
+								"caption": "Settings",
+								"command": "edit_settings",
+								"args": {
+									"base_file": "${packages}/StyleLint-Formatter/StyleLint-Formatter.sublime-settings",
+									"default": "// Settings in here override those in \"StyleLint-Formatter/StyleLint-Formatter.sublime-settings\"\n{\n\t$0\n}\n",
+								},
+							},
+							{
+								"caption": "-",
+							},
+							{
+								"caption": "Key Bindings – Default",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/StyleLint-Formatter/Default (OSX).sublime-keymap",
+									"platform": "OSX",
+								},
+							},
+							{
+								"caption": "Key Bindings – Default",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/StyleLint-Formatter/Default (Linux).sublime-keymap",
+									"platform": "Linux",
+								},
+							},
+							{
+								"caption": "Key Bindings – Default",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/StyleLint-Formatter/Default (Windows).sublime-keymap",
+									"platform": "Windows",
+								},
+							},
+							{
+								"caption": "Key Bindings – User",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/User/Default (OSX).sublime-keymap",
+									"platform": "OSX",
+								},
+							},
+							{
+								"caption": "Key Bindings – User",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/User/Default (Linux).sublime-keymap",
+									"platform": "Linux",
+								},
+							},
+							{
+								"caption": "Key Bindings – User",
+								"command": "open_file",
+								"args": {
+									"file": "${packages}/User/Default (Windows).sublime-keymap",
+									"platform": "Windows",
+								},
+							},
+							{
+								"caption": "-",
+							},
+						],
+					},
+				],
+			},
+		],
+	},
+]
