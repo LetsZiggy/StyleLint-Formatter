@@ -1,0 +1,18 @@
+{
+	"$schema": "sublime://packagecontrol.io/schemas/repository",
+	"schema_version": "4.0.0",
+	"packages": [
+		{
+			"name": "StyleLint-Formatter",
+			"details": "https://github.com/LetsZiggy/StyleLint-Formatter",
+			"issues": "https://github.com/LetsZiggy/StyleLint-Formatter/issues",
+			"readme": "https://raw.githubusercontent.com/LetsZiggy/StyleLint-Formatter/main/README.md",
+			"releases": [
+				{
+					"sublime_text": ">=3000",
+					"tags": true
+				}
+			]
+		}
+	]
+}
