@@ -48,7 +48,7 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
     output = self.run_script_on_file(filename=self.view.file_name(), content=buffer_text)
 
     # log output in debug mode
-    if PluginUtils.get_pref("debug"):
+    if PluginUtils.get_pref(["debug"], self.view):
       print(output)
 
     # If the prettified text length is nil, the current syntax isn't supported.
@@ -86,8 +86,8 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
   def run_script_on_file(self, filename=None, content=None):
     try:
       dirname = filename and os.path.dirname(filename)
-      node_path = PluginUtils.get_node_path()
-      stylelint_path = PluginUtils.get_stylelint_path(dirname)
+      node_path = PluginUtils.get_node_path(self.view)
+      stylelint_path = PluginUtils.get_stylelint_path(dirname, self.view)
 
       if stylelint_path == False:
         sublime.error_message("stylelint could not be found on your path")
@@ -101,14 +101,14 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
       cmd = node_cmd + [stylelint_path, "--fix", "--stdin", "--stdin-filename", filename]
 
       project_path = PluginUtils.project_path()
-      extra_args = PluginUtils.get_pref("extra_args")
+      extra_args = PluginUtils.get_pref(["extra_args"], self.view)
       if extra_args:
         cmd += [arg.replace("$project_path", project_path) for arg in extra_args]
 
-      if PluginUtils.get_pref("debug"):
+      if PluginUtils.get_pref(["debug"], self.view):
         print("stylelint command line", cmd)
 
-      config_path = PluginUtils.get_pref("config_path")
+      config_path = PluginUtils.get_pref(["config_path"], self.view)
 
       if os.path.isfile(config_path):
         # If config file path exists, use as is
@@ -153,10 +153,10 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
 class StyleLintFormatterEventListeners(sublime_plugin.EventListener):
   @staticmethod
   def should_run_command(view):
-    if not PluginUtils.get_pref("format_on_save"):
+    if not PluginUtils.get_pref(["format_on_save"], view):
       return False
 
-    extensions = PluginUtils.get_pref("format_on_save_extensions")
+    extensions = PluginUtils.get_pref(["format_on_save_extensions"], view)
     extension = os.path.splitext(view.file_name())[1][1:]
 
     # Default to using filename if no extension
@@ -196,23 +196,52 @@ class PluginUtils:
     return folder_path
 
   @staticmethod
-  def get_pref(key):
+  def get_pref(key_list, view=None):
+    if view is not None:
+      settings = view.settings()
+
+      # Flat settings in .sublime-project
+      flat_keys = ".".join(key_list)
+      if settings.has(f"{PROJECT_NAME}.{flat_keys}"):
+        value = settings.get(f"{PROJECT_NAME}.{flat_keys}")
+        return value
+
+      # Nested settings in .sublime-project
+      if settings.has(PROJECT_NAME):
+        value = settings.get(PROJECT_NAME)
+
+        for key in key_list:
+          try:
+            value = value[key]
+          except:
+            value = None
+            break
+
+        if value is not None:
+          return value
+
     global_settings = sublime.load_settings(SETTINGS_FILE)
-    value = global_settings.get(key)
+    value = global_settings.get(key_list[0])
 
     # Load active project settings
     project_settings = sublime.active_window().active_view().settings()
 
     # Overwrite global config value if it's defined
     if project_settings.has(PROJECT_NAME):
-      value = project_settings.get(PROJECT_NAME).get(key, value)
+      value = project_settings.get(PROJECT_NAME).get(key_list[0], value)
 
     return value
 
   @staticmethod
-  def get_node_path():
+  def get_node_path(view=None):
     platform = sublime.platform()
-    node = PluginUtils.get_pref("node_path").get(platform)
+
+    # .sublime-project
+    node = PluginUtils.get_pref(["node_path", platform], view)
+
+    # .sublime-settings
+    node = node.get(platform) if isinstance(node, dict) else node
+
     if type(node) == str:
       print("Using node.js path on '" + platform + "': " + node)
     else:
@@ -220,6 +249,7 @@ class PluginUtils:
     return node
 
   # Convert path that possibly contains a user tilde and/or is a relative path into an absolute path.
+  @staticmethod
   def normalize_path(path, realpath=False):
     if realpath:
       return os.path.realpath(os.path.expanduser(path))
@@ -258,30 +288,41 @@ class PluginUtils:
     return None
 
   @staticmethod
-  def get_local_stylelint(dirname):
+  def get_local_stylelint(dirname, view=None):
     pkg = PluginUtils.findup("node_modules/stylelint", dirname)
     if pkg == None:
       return None
     else:
-      path = PluginUtils.get_pref("local_stylelint_path").get(sublime.platform())
+      platform = sublime.platform()
+
+      # .sublime-project
+      path = PluginUtils.get_pref(["local_stylelint_path", platform], view)
+
+      # .sublime-settings
+      path = path.get(platform) if isinstance(path, dict) else path
+
       if not path:
         return None
       d = os.path.dirname(os.path.dirname(pkg))
-      esl = os.path.join(d, path)
+      local_stylelint_path = os.path.join(d, path)
 
-      if os.path.isfile(esl):
-        return esl
+      if os.path.isfile(local_stylelint_path):
+        return local_stylelint_path
       else:
         return None
 
   @staticmethod
-  def get_stylelint_path(dirname):
+  def get_stylelint_path(dirname, view=None):
     platform = sublime.platform()
-    stylelint = dirname and PluginUtils.get_local_stylelint(dirname)
+    stylelint = dirname and PluginUtils.get_local_stylelint(dirname, view)
 
     # if local stylelint not available, then using the settings config
-    if stylelint == None:
-      stylelint = PluginUtils.get_pref("stylelint_path").get(platform)
+    if stylelint is None:
+      # .sublime-project
+      stylelint = PluginUtils.get_pref(["stylelint_path", platform], view)
+
+      # .sublime-settings
+      stylelint = stylelint.get(platform) if isinstance(stylelint, dict) else stylelint
 
     print("Using stylelint path on '" + platform + "': " + stylelint)
     return stylelint
