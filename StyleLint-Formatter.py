@@ -5,7 +5,7 @@
 import sublime, sublime_plugin
 import platform
 import glob
-import os, sys, subprocess, codecs, webbrowser, signal
+import os, sys, subprocess, codecs, webbrowser, signal, re
 from subprocess import Popen, PIPE, check_output
 
 try:
@@ -127,9 +127,7 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
         content = content.encode("utf-8")
 
       output = PluginUtils.get_output(cmd, cdir, content)
-
-      if output.endswith("\n\n") > -1:
-        output = output[: len(output) - 1]
+      output = re.sub("\n+$", "\n", output)
 
       return output
 
