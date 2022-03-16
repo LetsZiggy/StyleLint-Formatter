@@ -3,6 +3,7 @@
 # You can obtain one at http://mozilla.org/MPL/2.0/.
 import glob
 import os
+import pathlib
 import re
 import signal
 import sys
@@ -98,8 +99,10 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
 				sublime.error_message("Cannot lint unsaved file")
 
 			# Better support globally-available stylelint binaries that don't need to be invoked with node.
+			is_stylelint_bin = len(pathlib.Path(stylelint_path).suffix) == 0
 			node_cmd = [node_path] if node_path else []
-			cmd = node_cmd + [stylelint_path, "--fix", "--stdin", "--stdin-filename", filename]
+			stylelint_cmd = [stylelint_path, "--fix", "--stdin", "--stdin-filename", filename]
+			cmd = node_cmd + stylelint_cmd if not is_stylelint_bin else stylelint_cmd
 
 			project_path = PluginUtils.project_path()
 			extra_args = PluginUtils.get_pref(["extra_args"], self.view)
