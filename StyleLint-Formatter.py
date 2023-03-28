@@ -4,7 +4,6 @@
 import glob
 import os
 import pathlib
-import re
 import signal
 import sys
 from subprocess import PIPE, Popen, check_output
@@ -127,7 +126,6 @@ class FormatStylelintCommand(sublime_plugin.TextCommand):
 				content = content.encode("utf-8")
 
 			output = PluginUtils.get_output(cmd, cdir, content)
-			output = re.sub("\n+$", "\n", output)
 
 			return output
 
