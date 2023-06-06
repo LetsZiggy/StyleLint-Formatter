@@ -1,344 +1,298 @@
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-# If a copy of the MPL was not distributed with this file,
-# You can obtain one at http://mozilla.org/MPL/2.0/.
-import glob
-import os
-import pathlib
-import signal
-import sys
-from subprocess import PIPE, Popen, check_output
+from os import path as os_path
+from pathlib import Path as pathlib_Path
+from subprocess import PIPE, Popen
+from typing import Any, Dict, Literal, Tuple, TypedDict, Union
 
 import sublime
 import sublime_plugin
 
-##########################################################################
-##                                                                      ##
-##             This project is inspired by and forked from              ##
-##   ESLint-Formatter (https://github.com/TheSavior/ESLint-Formatter)   ##
-##                  Based on: b76c47e on 22 May 2020                    ##
-##                                                                      ##
-##########################################################################
-
 PROJECT_NAME = "StyleLint-Formatter"
-SETTINGS_FILE = PROJECT_NAME + ".sublime-settings"
+SETTINGS_FILE = f"{PROJECT_NAME}.sublime-settings"
 PLATFORM = sublime.platform()
 ARCHITECTURE = sublime.arch()
-KEYMAP_FILE = "Default (" + PLATFORM + ").sublime-keymap"
+KEYMAP_FILE = f"Default ({PLATFORM}).sublime-keymap"
 IS_WINDOWS = PLATFORM == "windows"
+CODE_COMMAND_NOT_FOUND = 127
 
 
-class FormatStylelintCommand(sublime_plugin.TextCommand):
-	def run(self, edit):
-		# Save the current viewport position to scroll to it after formatting.
-		previous_selection = list(self.view.sel())  # Copy.
-		previous_position = self.view.viewport_position()
+class SettingsData(TypedDict):
+	variables: Dict[str, Any]
+	config: Dict[str, Any]
 
-		# Save the already folded code to refold it after formatting.
-		# Backup of folded code is taken instead of regions because the start and end pos
-		# of folded regions will change once formatted.
-		folded_regions_content = [self.view.substr(region) for region in self.view.folded_regions()]
 
-		# Get the current text in the buffer and save it in a temporary file.
-		# This allows for scratch buffers and dirty files to be linted as well.
-		entire_buffer_region = sublime.Region(0, self.view.size())
+class Settings:
+	data: SettingsData = {
+		"variables": {},
+		"config": {},
+	}
 
-		buffer_text = self.get_buffer_text(entire_buffer_region)
+	@classmethod
+	def set_settings(cls, view: sublime.View, variables: Dict[str, str]) -> None:
+		settings_default = sublime.load_settings(SETTINGS_FILE).to_dict()
+		settings_default = {k: v for k, v in Settings.flatten_dict(settings_default)}
+		cls.data["config"] = settings_default
 
-		output = self.run_script_on_file(filename=self.view.file_name(), content=buffer_text)
+		settings_user = view.settings().to_dict()
+		settings_user = {k: v for k, v in settings_user.items() if "StyleLint-Formatter" in k}
+		settings_user = {k[20:]: v for k, v in Settings.flatten_dict(settings_user)}
+		cls.data["config"].update(settings_user)
 
-		# log output in debug mode
-		if PluginUtils.get_pref(["debug"], self.view):
-			print(output)
+		variables.update({k: v for k, v in cls.data["config"].items() if "." not in k and isinstance(v, str)})
+		cls.data["variables"] = variables
 
-		# If the prettified text length is nil, the current syntax isn't supported.
-		if output is None or len(output) < 1:
-			return
+		for k, v in cls.data["config"].items():
+			if isinstance(v, str) and "${" in v and "}" in v:
+				v = sublime.expand_variables(v, cls.data["variables"])
+				cls.data["config"][k] = v
 
-		# Replace the text only if it's different.
-		if output != buffer_text:
-			self.view.replace(edit, entire_buffer_region, output)
+			if isinstance(v, str) and "path" in k:
+				v = os_path.normpath(os_path.expanduser(v))
+				cls.data["config"][k] = v
 
-		self.refold_folded_regions(folded_regions_content, output)
-		self.view.set_viewport_position((0, 0), False)
-		self.view.set_viewport_position(previous_position, False)
-		self.view.sel().clear()
+	@classmethod
+	def flatten_dict(cls, obj: Dict[str, Any], keystring: str = ""):
+		if isinstance(obj, dict):
+			keystring = f"{keystring}." if keystring else keystring
 
-		# Restore the previous selection if formatting wasn't performed only for it.
-		# if not is_formatting_selection_only:
-		for region in previous_selection:
-			self.view.sel().add(region)
+			for k in obj:
+				yield from Settings.flatten_dict(obj[k], keystring + str(k))
+		else:
+			yield keystring, obj
 
-	def get_buffer_text(self, region):
-		buffer_text = self.view.substr(region)
-		return buffer_text
+	@classmethod
+	def verify_settings(cls) -> None:
+		node_path_exist: Union[Literal[True], Tuple[str, str]] = True
+		stylelint_path_exist: Dict[Literal["local", "fallback"], Union[Literal[True], Tuple[str, str]]] = {
+			"local": True,
+			"fallback": True,
+		}
 
-	def get_lint_directory(self, filename):
-		project_path = PluginUtils.project_path(None)
-		if project_path is not None:
-			return PluginUtils.normalize_path(project_path)
+		for k, v in cls.data["config"].items():
+			if isinstance(v, str) and "node_" in k and "path" in k and PLATFORM.lower() in k:
+				node_path_exist = True if os_path.exists(v) else (k, v)
 
-		if filename is not None:
-			cdir = os.path.dirname(filename)
-			if os.path.exists(cdir):
-				return cdir
+			if isinstance(v, str) and "stylelint_" in k and "path" in k and PLATFORM.lower() in k:
+				if "local" in k:
+					stylelint_path_exist["local"] = True if os_path.exists(v) else (k, v)
 
-		return os.getcwd()
+				if "local" not in k:
+					stylelint_path_exist["fallback"] = True if os_path.exists(v) else (k, v)
 
-	def run_script_on_file(self, filename=None, content=None):
-		try:
-			dirname = filename and os.path.dirname(filename)
-			node_path = PluginUtils.get_node_path(self.view)
-			stylelint_path = PluginUtils.get_stylelint_path(dirname, self.view)
+		if node_path_exist is not True:
+			sublime.error_message("Node.js path does not exist. See console output.")
+			raise Exception(f"\n>>> `node_path` does not exist: {node_path_exist[0]} -> {node_path_exist[1]}")
 
-			if stylelint_path is False:
-				sublime.error_message("stylelint could not be found on your path")
-				return
+		if stylelint_path_exist["local"] is not True and stylelint_path_exist["fallback"] is not True:
+			sublime.error_message("StyleLint path does not exist. See console output.")
+			raise Exception(
+				"\n>>> `local_stylelint_path` does not exist: "
+				+ f"{stylelint_path_exist['local'][0]} -> {stylelint_path_exist['local'][1]}"
+				+ "\n>>> `stylelint_path` does not exist: "
+				+ f"{stylelint_path_exist['fallback'][0]} -> {stylelint_path_exist['fallback'][1]}"
+			)
 
-			if filename is None:
-				sublime.error_message("Cannot lint unsaved file")
+	@staticmethod
+	def get_settings(view: Union[sublime.View, None]) -> SettingsData:
+		variables = view.window().extract_variables()
 
-			# Better support globally-available stylelint binaries that don't need to be invoked with node.
-			is_stylelint_bin = len(pathlib.Path(stylelint_path).suffix) == 0
-			node_cmd = [node_path] if node_path else []
-			stylelint_cmd = [stylelint_path, "--fix", "--stdin", "--stdin-filename", filename]
-			cmd = node_cmd + stylelint_cmd if not is_stylelint_bin else stylelint_cmd
+		if view is not None and (
+			variables["file_extension"] == "sublime-project"
+			or len(Settings.data["variables"]) == 0
+			or len(Settings.data["config"]) == 0
+			or Settings.data["variables"]["file_extension"] != variables["file_extension"]
+		):
+			Settings.set_settings(view, variables)
 
-			project_path = PluginUtils.project_path()
-			extra_args = PluginUtils.get_pref(["extra_args"], self.view)
-			if extra_args:
-				cmd += [arg.replace("$project_path", project_path) for arg in extra_args]
-
-			if PluginUtils.get_pref(["debug"], self.view):
-				print("stylelint command line", cmd)
-
-			config_path = PluginUtils.get_pref(["config_path"], self.view)
-
-			# If config file path exists, use as is else find config file relative to project path
-			full_config_path = config_path if os.path.isfile(config_path) else os.path.join(project_path, config_path)
-
-			if os.path.isfile(full_config_path):
-				print("Using configuration from {0}".format(full_config_path))
-				cmd.extend(["--config", full_config_path])
-
-			cdir = self.get_lint_directory(filename)
-
-			if isinstance(content, str):
-				content = content.encode("utf-8")
-
-			output = PluginUtils.get_output(cmd, cdir, content)
-
-			return output
-
-		except:
-			# Something bad happened.
-			msg = str(sys.exc_info()[1])
-			print("Unexpected error({0}): {1}".format(sys.exc_info()[0], msg))
-			sublime.error_message(msg)
-
-	def refold_folded_regions(self, folded_regions_content, entire_file_contents):
-		self.view.unfold(sublime.Region(0, len(entire_file_contents)))
-		region_end = 0
-
-		for content in folded_regions_content:
-			region_start = entire_file_contents.index(content, region_end)
-			if region_start > -1:
-				region_end = region_start + len(content)
-				self.view.fold(sublime.Region(region_start, region_end))
+		return Settings.data
 
 
 class StyleLintFormatterEventListeners(sublime_plugin.EventListener):
 	@staticmethod
-	def should_run_command(view):
-		if not PluginUtils.get_pref(["format_on_save"], view):
-			return False
+	def should_run_command(view: sublime.View, settings: SettingsData) -> bool:
+		extensions = settings["config"]["format_on_save_extensions"]
+		extension = settings["variables"]["file_extension"] or settings["variables"]["file_name"].split(".")[-1]
 
-		extensions = PluginUtils.get_pref(["format_on_save_extensions"], view)
-		extension = os.path.splitext(view.file_name())[1][1:]
-
-		# Default to using filename if no extension
-		if not extension:
-			extension = os.path.basename(view.file_name())
-
-		# Skip if extension is not listed
 		return not extensions or extension in extensions
 
 	@staticmethod
-	def on_pre_save(view):
-		if StyleLintFormatterEventListeners.should_run_command(view):
+	def on_pre_save(view: sublime.View) -> None:
+		settings = Settings.get_settings(view)
+
+		if settings["config"]["format_on_save"] and StyleLintFormatterEventListeners.should_run_command(view, settings):
 			view.run_command("format_stylelint")
 
-	@staticmethod
-	def on_exit():
+	# @staticmethod
+	# def on_load(view: sublime.View) -> None:
+	# """
+	# // If using stylelint_d, set to `true` to stop the daemon when Sublime Text closes
+	# // https://github.com/jo-sm/stylelint_d
+	# // "using_stylelint_d": false,
+	# """
+
+	# 	## from contextlib import suppress as contextlib_suppress
+	# 	## from subprocess import run as subprocess_run
+
+	# 	settings = Settings.get_settings(view)
+
+	# 	if settings["config"]["using_stylelint_d"] and (
+	# 		"stylelint_d" in settings["config"]["local_stylelint_path"]
+	# 		or (
+	# 			"stylelint_d" not in settings["config"]["local_stylelint_path"]
+	# 			and "stylelint_d" in settings["config"]["stylelint_path"]
+	# 		)
+	# 	):
+	# 		cmd_node = settings["config"][f"node_path.{PLATFORM}".lower()]
+	# 		cmd_stylelint = (
+	# 			settings["config"][f"local_stylelint_path.{PLATFORM}".lower()]
+	# 			or settings["config"][f"stylelint_path.{PLATFORM}".lower()]
+	# 		)
+	# 		with contextlib_suppress(Exception):
+	# 			subprocess_run([cmd_node, cmd_stylelint, "start"])
+
+	# @staticmethod
+	# def on_exit() -> None:
+	# """
+	# // If using stylelint_d, set to `true` to stop the daemon when Sublime Text closes
+	# // https://github.com/jo-sm/stylelint_d
+	# // "using_stylelint_d": false,
+	# """
+
+	# 	## from contextlib import suppress as contextlib_suppress
+	# 	## from os import kill as os_kill
+	# 	## from signal import SIGKILL as signal_SIGKILL
+	# 	## from subprocess import check_output as subprocess_check_output
+	# 	## from subprocess import run as subprocess_run
+
+	# 	settings = Settings.get_settings(None)
+
+	# 	if settings["config"]["using_stylelint_d"] and (
+	# 		"stylelint_d" in settings["config"]["local_stylelint_path"]
+	# 		or (
+	# 			"stylelint_d" not in settings["config"]["local_stylelint_path"]
+	# 			and "stylelint_d" in settings["config"]["stylelint_path"]
+	# 		)
+	# 	):
+	# 		cmd_node = settings["config"][f"node_path.{PLATFORM}".lower()]
+	# 		cmd_stylelint = (
+	# 			settings["config"][f"local_stylelint_path.{PLATFORM}".lower()]
+	# 			or settings["config"][f"stylelint_path.{PLATFORM}".lower()]
+	# 		)
+	# 		with contextlib_suppress(Exception):
+	# 			subprocess_run([cmd_node, cmd_stylelint, "stop"])
+	# 			pids = map(int, subprocess_check_output(["pidof", "stylelint_d"]).split())
+
+	# 			for pid in pids:
+	# 				os_kill(int(pid), signal_SIGKILL)
+
+
+class FormatStylelintCommand(sublime_plugin.TextCommand):
+	def run(self, edit) -> None:
+		settings = Settings.get_settings(self.view)
+
+		if not StyleLintFormatterEventListeners.should_run_command(self.view, settings):
+			print(">>> StyleLint-Formatter: File type not supported")
+			return
+		else:
+			Settings.verify_settings()
+
+		viewport_position = self.view.viewport_position()
+		selections = list(self.view.sel())
+		folded_regions = [self.view.substr(region) for region in self.view.folded_regions()]
+
+		cmd_stylelint = [
+			settings["config"][f"local_stylelint_path.{PLATFORM}".lower()]
+			or settings["config"][f"stylelint_path.{PLATFORM}".lower()]
+		]
+		is_bin_cmd_stylelint = len(pathlib_Path(cmd_stylelint[0]).suffix) == 0
+		cmd_node = [settings["config"][f"node_path.{PLATFORM}".lower()]] if not is_bin_cmd_stylelint else []
+		cmd_config = ["--config", f"{settings['config']['config_path']}"] if settings["config"]["config_path"] else []
+		cmd_extra = list(
+			filter(
+				lambda v: v
+				not in {
+					"-q",
+					"--quiet",
+					"--quiet-deprecation-warnings",
+					"--rdd",
+					"--report-descriptionless-disables",
+					"--risd",
+					"--report-invalid-scope-disables",
+					"--rd",
+					"--report-needless-disables",
+				},
+				settings["config"]["extra_args"],
+			)
+		) + (
+			[
+				"--report-descriptionless-disables",
+				"--report-invalid-scope-disables",
+				"--report-needless-disables",
+				"--fix",
+			]
+			if settings["config"]["debug"]
+			else ["--quiet", "--quiet-deprecation-warnings", "--fix"]
+		)
+		cmd_filename = ["--stdin", "--stdin-filename", f"{settings['variables']['file']}"]
+		cmd = [v for v in (cmd_node + cmd_stylelint + cmd_config + cmd_extra + cmd_filename) if len(v)]
+
+		buffer_region = sublime.Region(0, self.view.size())
+		content = self.view.substr(buffer_region)
+		content = content.encode("utf-8")
+
 		try:
-			pids = map(int, check_output(["pidof", "stylelint_d"]).split())
-			for pid in pids:
-				os.kill(int(pid), signal.SIGKILL)
-		except:
-			pass
-
-
-class PluginUtils:
-	@staticmethod
-	# Fetches root path of open project
-	def project_path(fallback=os.getcwd()):
-		project_data = sublime.active_window().project_data()
-
-		# if cannot find project data, use cwd
-		if project_data is None:
-			return fallback
-
-		folders = project_data["folders"]
-		folder_path = folders[0]["path"]
-
-		return folder_path
-
-	@staticmethod
-	def get_pref(key_list, view=None):
-		if view is not None:
-			settings = view.settings()
-
-			# Flat settings in .sublime-project
-			flat_keys = ".".join(key_list)
-			if settings.has(f"{PROJECT_NAME}.{flat_keys}"):
-				value = settings.get(f"{PROJECT_NAME}.{flat_keys}")
-				return value
-
-			# Nested settings in .sublime-project
-			if settings.has(PROJECT_NAME):
-				value = settings.get(PROJECT_NAME)
-
-				for key in key_list:
-					try:
-						value = value[key]
-					except:
-						value = None
-						break
-
-				if value is not None:
-					return value
-
-		global_settings = sublime.load_settings(SETTINGS_FILE)
-		value = global_settings.get(key_list[0])
-
-		# Load active project settings
-		project_settings = sublime.active_window().active_view().settings()
-
-		# Overwrite global config value if it's defined
-		if project_settings.has(PROJECT_NAME):
-			value = project_settings.get(PROJECT_NAME).get(key_list[0], value)
-
-		return value
-
-	@staticmethod
-	def get_node_path(view=None):
-		platform = sublime.platform()
-
-		# .sublime-project
-		node = PluginUtils.get_pref(["node_path", platform], view)
-
-		# .sublime-settings
-		node = node.get(platform) if isinstance(node, dict) else node
-
-		if isinstance(node, str):
-			print(f">>> Using node.js path on '{platform}': {node}")
-		else:
-			print("Not using explicit node.js path")
-
-		return node
-
-	# Convert path that possibly contains a user tilde and/or is a relative path into an absolute path.
-	@staticmethod
-	def normalize_path(path, realpath=False):
-		if realpath:
-			return os.path.realpath(os.path.expanduser(path))
-		else:
-			project_dir = sublime.active_window().project_file_name()
-			cwd = os.path.dirname(project_dir) if project_dir else os.getcwd()
-			return os.path.normpath(os.path.join(cwd, os.path.expanduser(path)))
-
-	# Yield path and every directory above path.
-	@staticmethod
-	def walk_up(path):
-		curr_path = path
-		while 1:
-			yield curr_path
-			curr_path, tail = os.path.split(curr_path)
-			if not tail:
-				break
-
-	# Find the first path matching a given pattern within dirname or the nearest ancestor of dirname.
-	@staticmethod
-	def findup(pattern, dirname=None):
-		if dirname is None:
-			project_path = PluginUtils.project_path()
-			normalized_directory = PluginUtils.normalize_path(project_path)
-		else:
-			normalized_directory = PluginUtils.normalize_path(dirname)
-
-		for directory in PluginUtils.walk_up(normalized_directory):
-			matches = glob.glob(os.path.join(directory, pattern))
-			if matches:
-				return matches[0]
-
-		return None
-
-	@staticmethod
-	def get_local_stylelint(dirname, view=None):
-		pkg = PluginUtils.findup("node_modules/stylelint", dirname)
-		if pkg is None:
-			return None
-		else:
-			platform = sublime.platform()
-
-			# .sublime-project
-			path = PluginUtils.get_pref(["local_stylelint_path", platform], view)
-
-			# .sublime-settings
-			path = path.get(platform) if isinstance(path, dict) else path
-
-			if not path:
-				return None
-
-			directory = os.path.dirname(os.path.dirname(pkg))
-			local_stylelint_path = os.path.join(directory, path)
-
-			if os.path.isfile(local_stylelint_path):
-				return local_stylelint_path
-			else:
-				return None
-
-	@staticmethod
-	def get_stylelint_path(dirname, view=None):
-		platform = sublime.platform()
-		stylelint = dirname and PluginUtils.get_local_stylelint(dirname, view)
-
-		# if local stylelint not available, then using the settings config
-		if stylelint is None:
-			# .sublime-project
-			stylelint = PluginUtils.get_pref(["stylelint_path", platform], view)
-
-			# .sublime-settings
-			stylelint = stylelint.get(platform) if isinstance(stylelint, dict) else stylelint
-
-		print(f">>> Using stylelint path on '{platform}': {stylelint}")
-		return stylelint
-
-	@staticmethod
-	def get_output(cmd, cdir, data):
-		try:
-			process = Popen(cmd, stdout=PIPE, stdin=PIPE, stderr=PIPE, cwd=cdir, shell=IS_WINDOWS)
+			p = Popen(
+				cmd,
+				stdout=PIPE,
+				stdin=PIPE,
+				stderr=PIPE,
+				cwd=settings["variables"]["project_path"] or settings["variables"]["file_path"],
+				shell=IS_WINDOWS,
+			)
 		except OSError:
+			sublime.error_message("Couldn't find node.js. See console output.")
 			raise Exception(
-				"Couldn't find node.js. Make sure it's in your $PATH by running `node -v` in your command-line."
+				"\n>>> Couldn't find node.js. Make sure it's in your $PATH by running `node --version` in your command-line."
 			)
 
-		stdout, stderr = process.communicate(input=data)
+		stdout, stderr = p.communicate(input=content)
 		stdout = stdout.decode("utf-8")
 		stderr = stderr.decode("utf-8")
 
-		if stderr:
-			raise Exception("Error: %s" % stderr)
-		elif process.returncode == 127:
-			raise Exception("Error: %s" % (stderr or stdout))
-		else:
-			return stdout
+		if stderr and settings["config"]["debug"]:
+			print(">>> StyleLint-Formatter:", " ".join(cmd))
+			print(">>> Debug:", stderr)
+		elif stderr:
+			sublime.error_message(stderr)
+			raise Exception(f"Error: {stderr}")
+		elif p.returncode == CODE_COMMAND_NOT_FOUND:
+			sublime.error_message(stderr or stdout)
+			raise Exception(f"Error: {(stderr or stdout)}")
+		elif stdout is None or len(stdout) < 1:
+			return
+		elif stdout != content:
+			self.view.replace(edit, buffer_region, stdout)
+
+			if not settings["config"]["debug"]:
+				print(">>> StyleLint-Formatter (success):", " ".join(cmd))
+
+		# Reapply code folds
+		self.view.unfold(sublime.Region(0, len(stdout)))
+		region_start = -1
+		region_end = 0
+
+		for region in folded_regions:
+			try:
+				region_start = stdout.find(region, region_end)
+			finally:
+				if region_start > -1:
+					region_end = region_start + len(region)
+					self.view.fold(sublime.Region(region_start, region_end))
+
+		# Reapply viewport position
+		self.view.set_viewport_position((0, 0), False)
+		self.view.set_viewport_position(viewport_position, False)
+		self.view.sel().clear()
+
+		# Reapply cursor position and buffer selections
+		for selection in selections:
+			self.view.sel().add(selection)
