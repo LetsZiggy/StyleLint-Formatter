@@ -3,6 +3,12 @@
  * @see https://prettier.io/docs/configuration
  */
 export default {
+	// ---Plugins--- //
+
+	plugins: [
+		"prettier-plugin-pkg",
+	],
+
 	// ---Options--- //
 
 	// printWidth: 120,

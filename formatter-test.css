@@ -1,0 +1,48 @@
+.test {
+	position: absolute;
+	width: 0;
+	height: 0;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	clip: rect(0,0,0,0);
+	white-space: nowrap;
+	border-width: 0;
+	transition-timing-function: cubic-bezier(0,0,0,0);
+	transition-duration: 0;
+	transition-property: color;
+}
+
+/*
+Before: {
+	transition-property: color;
+	white-space: nowrap;
+	padding: 0;
+	transition-duration: 0;
+	margin: 0;
+	overflow: hidden;
+	clip: rect(0,0,0,0);
+	border-width: 0;
+	height: 0;
+	position: absolute;
+	transition-timing-function: cubic-bezier(0,0,0,0);
+	width: 0;
+}
+
+--- --- --- --- ---
+
+After: {
+	position: absolute;
+	width: 0;
+	height: 0;
+	padding: 0;
+	margin: 0;
+	overflow: hidden;
+	clip: rect(0,0,0,0);
+	white-space: nowrap;
+	border-width: 0;
+	transition-timing-function: cubic-bezier(0,0,0,0);
+	transition-duration: 0;
+	transition-property: color;
+}
+*/

@@ -1,0 +1,11 @@
+#$schema: 'https://www.schemastore.org/pnpm-workspace.json'
+
+# installs any missing peer dependencies as dev dependencies
+autoInstallPeers: true
+
+# delay (seconds) the installation of newly published versions
+minimumReleaseAge: 1440 # 24hr
+#minimumReleaseAgeExclude: []
+
+# for pnpm, use flat node_modules
+shamefullyHoist: true
