@@ -1,0 +1,11 @@
+{
+	"name": "stylelint-formatter",
+	"description": "StyleLint Formatter",
+	"version": "0.1.0",
+	"scripts": {},
+	"devDependencies": {
+		"stylelint": "^15.6.2",
+		"stylelint-config-recess-order": "^4.0.0",
+		"stylelint_d": "^3.0.0"
+	}
+}
