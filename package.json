@@ -1,0 +1,29 @@
+{
+	"$schema": "https://json.schemastore.org/package.json",
+	"name": "stylelint-formatter",
+	"version": "0.0.0",
+	"type": "module",
+	"description": "stylelint-formatter",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/LetsZiggy/StyleLint-Formatter"
+	},
+	"homepage": "https://github.com/LetsZiggy/StyleLint-Formatter#readme",
+	"contributors": [
+		"Shafiq Tahir <shafiqtahir.khan@gmail.com>"
+	],
+	"engines": {
+		"node": ">=22.0.0"
+	},
+	"scripts": {
+		"fix:prettier": "pnpm exec prettier --config ./prettier.config.js --write"
+	},
+	"devDependencies": {
+		"prettier": "^3.9.6",
+		"prettier-plugin-pkg": "^0.22.1",
+		"stylelint": "^17.14.1",
+		"stylelint-config-recess-order": "^7.8.0",
+		"stylelint-config-standard": "^40.0.0",
+		"stylelint-order": "^8.1.1"
+	}
+}

@@ -104,13 +104,13 @@ To override global plugin configuration for a specific project, add a settings o
 	 * (see "stylelint_path" below)
 	 */
 	"local_stylelint_path": {
-		"windows": "node_modules/stylelint/bin/stylelint.js",
-		"linux": "node_modules/.bin/stylelint",
-		"osx": "node_modules/.bin/stylelint",
+		"windows": "${project_path}/node_modules/stylelint/bin/stylelint.js",
+		"linux": "${project_path}/node_modules/.bin/stylelint",
+		"osx": "${project_path}/node_modules/.bin/stylelint",
 	},
 
 	/**
-	 * The location of the globally installed stylelint package to use as a fallback
+	 * The location of the user/global installed stylelint package to use as a fallback
 	 */
 	"stylelint_path": {
 		"windows": "%APPDATA%/npm/node_modules/stylelint/bin/stylelint",
@@ -130,10 +130,8 @@ To override global plugin configuration for a specific project, add a settings o
 
 	/**
 	 * Pass additional arguments to stylelint.
-	 * Each command should be a string where it supports the following replacements:
-	 * 	- $project_path - The path to the projects root folder
-	 * Example:
-	 * 	- ["--parser-options={\"tsconfigRootDir\": \"$project_path\"}"]
+	 * Read more here: https://stylelint.io/user-guide/cli
+	 * Please note that "-q | --quiet | --quiet-deprecation-warnings | --report-descriptionless-disables | --rdd | --report-invalid-scope-disables | --risd | --report-needless-disables | --rd" in `extra_args` will be filtered out (see `debug` below)
 	 */
 	"extra_args": [],
 
@@ -156,25 +154,21 @@ To override global plugin configuration for a specific project, add a settings o
 
 	/**
 	 * Logs stylelint output messages to console when set to true
+	 * Options below will be added to `extra_args` based on `debug` value:
+	 * 	- false:
+	 * 		- "--quiet" will be added
+	 * 		- "--quiet-deprecation-warnings" will be added
+	 * 		- "--report-descriptionless-disables | --rdd" will be removed
+	 * 		- "--report-invalid-scope-disables | --risd" will be removed
+	 * 		- "--report-needless-disables | --rd" will be removed
+	 * 	- true:
+	 * 		- "-q | --quiet" will be removed
+	 * 		- "--quiet-deprecation-warnings" will be removed
+	 * 		- "--report-descriptionless-disables" will be added
+	 * 		- "--report-invalid-scope-disables" will be added
+	 * 		- "--report-needless-disables" will be added
 	 */
 	"debug": false,
-}
-```
-
----
-
-### Performance
-
-If you experience performance issues, it may be worth taking a look at [`stylelint_d`](https://www.npmjs.com/package/stylelint_d). You can modify the settings to point to the `stylelint_d` binary instead of `stylelint`.
-
-```javascript
-/* EXAMPLE */
-{
-	"local_stylelint_path": {
-		"windows": "node_modules/stylelint/bin/stylelint_d.js",
-		"linux": "node_modules/.bin/stylelint_d",
-		"osx": "node_modules/.bin/stylelint_d",
-	},
 }
 ```
 
