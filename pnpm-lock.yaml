@@ -16,16 +16,16 @@ importers:
         version: 0.22.1(prettier@3.9.6)
       stylelint:
         specifier: ^17.14.1
-        version: 17.14.1
+        version: 17.14.1(supports-color@10.2.2)
       stylelint-config-recess-order:
         specifier: ^7.8.0
-        version: 7.8.0(stylelint-order@8.1.1(stylelint@17.14.1))(stylelint@17.14.1)
+        version: 7.8.0(stylelint-order@8.1.1(stylelint@17.14.1(supports-color@10.2.2)))(stylelint@17.14.1(supports-color@10.2.2))
       stylelint-config-standard:
         specifier: ^40.0.0
-        version: 40.0.0(stylelint@17.14.1)
+        version: 40.0.0(stylelint@17.14.1(supports-color@10.2.2))
       stylelint-order:
         specifier: ^8.1.1
-        version: 8.1.1(stylelint@17.14.1)
+        version: 8.1.1(stylelint@17.14.1(supports-color@10.2.2))
 
 packages:
 
@@ -310,8 +310,8 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.3.1:
-    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
+  js-yaml@4.3.2:
+    resolution: {integrity: sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==}
     hasBin: true
 
   json-parse-even-better-errors@2.3.1:
@@ -645,7 +645,7 @@ snapshots:
     dependencies:
       env-paths: 2.2.1
       import-fresh: 3.3.1
-      js-yaml: 4.3.1
+      js-yaml: 4.3.2
       parse-json: 5.2.0
 
   css-functions-list@3.3.3: {}
@@ -657,9 +657,11 @@ snapshots:
 
   cssesc@3.0.0: {}
 
-  debug@4.4.3:
+  debug@4.4.3(supports-color@10.2.2):
     dependencies:
       ms: 2.1.3
+    optionalDependencies:
+      supports-color: 10.2.2
 
   emoji-regex@8.0.0: {}
 
@@ -772,7 +774,7 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.3.1:
+  js-yaml@4.3.2:
     dependencies:
       argparse: 2.0.1
 
@@ -898,27 +900,27 @@ snapshots:
     dependencies:
       ansi-regex: 6.3.0
 
-  stylelint-config-recess-order@7.8.0(stylelint-order@8.1.1(stylelint@17.14.1))(stylelint@17.14.1):
+  stylelint-config-recess-order@7.8.0(stylelint-order@8.1.1(stylelint@17.14.1(supports-color@10.2.2)))(stylelint@17.14.1(supports-color@10.2.2)):
     dependencies:
-      stylelint: 17.14.1
-      stylelint-order: 8.1.1(stylelint@17.14.1)
+      stylelint: 17.14.1(supports-color@10.2.2)
+      stylelint-order: 8.1.1(stylelint@17.14.1(supports-color@10.2.2))
 
-  stylelint-config-recommended@18.0.0(stylelint@17.14.1):
+  stylelint-config-recommended@18.0.0(stylelint@17.14.1(supports-color@10.2.2)):
     dependencies:
-      stylelint: 17.14.1
+      stylelint: 17.14.1(supports-color@10.2.2)
 
-  stylelint-config-standard@40.0.0(stylelint@17.14.1):
+  stylelint-config-standard@40.0.0(stylelint@17.14.1(supports-color@10.2.2)):
     dependencies:
-      stylelint: 17.14.1
-      stylelint-config-recommended: 18.0.0(stylelint@17.14.1)
+      stylelint: 17.14.1(supports-color@10.2.2)
+      stylelint-config-recommended: 18.0.0(stylelint@17.14.1(supports-color@10.2.2))
 
-  stylelint-order@8.1.1(stylelint@17.14.1):
+  stylelint-order@8.1.1(stylelint@17.14.1(supports-color@10.2.2)):
     dependencies:
       postcss: 8.5.26
       postcss-sorting: 10.0.0(postcss@8.5.26)
-      stylelint: 17.14.1
+      stylelint: 17.14.1(supports-color@10.2.2)
 
-  stylelint@17.14.1:
+  stylelint@17.14.1(supports-color@10.2.2):
     dependencies:
       '@csstools/css-calc': 3.3.0(@csstools/css-parser-algorithms@4.0.0(@csstools/css-tokenizer@4.0.0))(@csstools/css-tokenizer@4.0.0)
       '@csstools/css-parser-algorithms': 4.0.0(@csstools/css-tokenizer@4.0.0)
@@ -931,7 +933,7 @@ snapshots:
       cosmiconfig: 9.0.2
       css-functions-list: 3.3.3
       css-tree: 3.2.1
-      debug: 4.4.3
+      debug: 4.4.3(supports-color@10.2.2)
       fast-glob: 3.3.3
       fastest-levenshtein: 1.0.16
       file-entry-cache: 11.1.5
